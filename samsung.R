@@ -1,7 +1,15 @@
 #
+# Clearing the workspace
+#
+rm(list = ls(all = TRUE))
+gc(reset=TRUE)
+set.seed(12345)
+
+#
 # Loading the data
 #
-load("samsungData.rda")
+train <- read.csv("data/train.csv")
+test  <- read.csv("data/test.csv")
 
 #
 # Loading reqired packages
