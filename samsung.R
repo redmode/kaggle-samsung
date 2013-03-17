@@ -1,25 +1,30 @@
 #
 # Clearing the workspace
 #
-rm(list = ls(all = TRUE))
+rm(list=ls(all=TRUE))
 gc(reset=TRUE)
 set.seed(12345)
 
 #
 # Loading the data
 #
-train <- read.csv("data/train.csv")
-test  <- read.csv("data/test.csv")
+data.train <- read.csv("data/train.csv")
+data.test  <- read.csv("data/test.csv")
 
 #
 # Loading reqired packages
 #
 require(caret)
+require(doMC)
+registerDoMC(2)
 
 #
-# Data preparation
+# Train data preparation
 #
-set.seed(1)
+subjects.test <- sample(unique(data.train$subject), round(length(unique(data.train$subject))/3))
+train <- !(data.train$subject %in% subjects.test) 
+X <- data.train[,1:561]
+Y <- data.train[,563]
 
 ## Splitting into training and testing sets
 subjects.test  <- c(23,25,26,27,28,29,30)
