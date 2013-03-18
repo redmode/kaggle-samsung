@@ -6,12 +6,6 @@ gc(reset=TRUE)
 set.seed(12345)
 
 #
-# Loading the data
-#
-data.train <- read.csv("data/train.csv")
-data.test  <- read.csv("data/test.csv")
-
-#
 # Loading reqired packages
 #
 require(caret)
@@ -19,99 +13,95 @@ require(doMC)
 registerDoMC(2)
 
 #
+# Loading the data
+#
+data.train <- read.csv("data/train.csv")
+data.test  <- read.csv("data/test.csv")
+
+# data.train <- subset(data.train, subject %in% c(1,3,6))
+
+#
 # Train data preparation
 #
-subjects.test <- sample(unique(data.train$subject), round(length(unique(data.train$subject))/3))
-train <- !(data.train$subject %in% subjects.test) 
+subjects <- unique(data.train$subject)
+subjects.validate <- sample(subjects, round(length(subjects)/5))
+train <- !(data.train$subject %in% subjects.validate)
 X <- data.train[,1:561]
-Y <- data.train[,563]
+Y <- as.factor(data.train[,563])
 
-## Splitting into training and testing sets
-subjects.test  <- c(23,25,26,27,28,29,30)
-test  <- subset(samsungData, samsungData$subject %in% subjects.test)
-train <- subset(samsungData, !samsungData$subject %in% subjects.test)
+## X[train,] + Y[train]   - training set
+## X[!train,] + Y[!train] - validate set
 
-## Excluding collinear variables
-N <- ncol(train)
-# ex1 <- nearZeroVar(train[,-c(N-1,N)])
-# ex2 <- findCorrelation(cor(train[,-c(N-1,N)]), 0.90)
-# ex <- c(ex1, ex2)
+#
+# Test data preparation
+#
+TX <- data.test[,1:561]
+
+#
+# Pre-processing and train controlling
+#
+pp <- preProcess(X, method=c("center","scale"))
+X <- predict(pp, X)
+cvCtrl <- trainControl(method='cv', number=10)
+
+#
+# Training models on X[train] + Validating on X[!train] set
+#
+
+
+model3 <- train(X[train,], Y[train], method='parRF', trControl=cvCtrl)
+
+
+model4 <- train(X[train,], Y[train], method='mlpWeightDecay', trControl=myControl, trace=FALSE, preProcess=PP)
+model5 <- train(X[train,], Y[train], method='ppr', trControl=myControl, preProcess=PP)
+model6 <- train(X[train,], Y[train], method='earth', trControl=myControl, preProcess=PP)
+model7 <- train(X[train,], Y[train], method='glm', trControl=myControl, preProcess=PP)
+
+model9 <- train(X[train,], Y[train], method='gam', trControl=myControl, preProcess=PP)
+model10 <- train(X[train,], Y[train], method='glmnet', trControl=myControl, preProcess=PP)
+
+#
+gbmFit <- train(X[train,], Y[train], method='gbm', 
+                trControl=cvCtrl, preProcess=cvProc,
+                tuneGrid=expand.grid(.interaction.depth=(2:5)*2, .n.trees=100, .shrinkage=0.1))
+confusionMatrix(predict(gdmFit$finalModel, newdata=X[!train,], type="response"), Y[!train])$overall[1]
+#
+svmFit <- train(X[train,], Y[train], method="svmRadial",
+                trControl=cvCtrl, preProcess=cvProc,
+                tuneLength=3, scaled=FALSE)
+confusionMatrix(predict(svmFit$finalModel, newdata=X[!train,], type="class"), Y[!train])$overall[1]
 # 
-# train <- train[,-ex]
-# test  <- test[,-ex]
-# N <- ncol(train)
-
+rfFit <- train(X[train,], Y[train], method="rf",
+               trControl=cvCtrl, tuneLength=3, scaled=FALSE)
+confusionMatrix(predict(rfFit$finalModel, newdata=X[!train,], type="response"), Y[!train])$overall[1]
 #
-# Feature selection (PCA)
-#
-xTrans <- preProcess(train[,-c(N-1,N)], method="pca", thresh=0.99)
-train <- cbind(predict(xTrans, train[,-c(N-1,N)]), activity=train[,c(N)])
-test  <- cbind(predict(xTrans, test[,-c(N-1,N)]),  activity=test[,c(N)])
-N <- ncol(train)
-
-#
-# Building models
-#
-
-cvControl <- trainControl(method="cv", number=10)
-
-svmFit <- train(train[,-c(N)],
-                train[,N],
-                method="svmRadial",
-                tuneLength=3,
-                trControl=cvControl,
+plsFit <- train(X[train,], Y[train], method="pls",
+                trControl=cvCtrl, preProcess=cvProc,
+                #tuneLength=ncol(X),
+                tuneGrid=expand.grid(.ncomp=290:310),
                 scaled=FALSE)
-
-rfFit <- train(train[,-c(N)],
-               train[,N],
-               method="rf",
-               tuneLength=5,
-               trControl=cvControl,
-               scaled=FALSE)
-
-plsFit <- train(train[,-c(N)],
-                train[,N],
-                method="pls",
-                tuneLength=N,
-                trControl=cvControl,
-                scaled=FALSE)
-
-knnFit <- train(train[,-c(N)],
-                train[,N],
-                method="knn",
-                tuneLength=5,
-                trControl=cvControl)
-
-gbmFit <- train(train[,-c(N)],
-                train[,N],
-                method="gbm",
-                tuneGrid=expand.grid(.interaction.depth=(2:5)*2, .n.trees=100, .shrinkage=0.1),
-                trControl=cvControl,
-                verbose=TRUE)
-
-models <- list(svm=svmFit, rf=rfFit, pls=plsFit, knn=knnFit, gbm=gbmFit)
-
-# pred <- predict(models, newdata=test[,-c(N)], type="prob")
-# probs <- extractProb(models, testX=test[,-c(N)], testY=test[,c(N)])
-# test.probs <- subset(probs, dataType=="Test")
-# plotClassProbs(test.probs)
-
-##
-## Single model prediction
-##
-pred.rf <- predict(rfFit$finalModel, newdata=test[,-c(N)], type="response")
-confusionMatrix(pred.rf, test$activity)
-##
-##
+confusionMatrix(predict(plsFit$finalModel, newdata=X[!train,], type="class"), Y[!train])$overall[1]
+#
+knnFit <- train(X[train,], Y[train], method="knn",
+                trControl=cvCtrl, preProcess=cvProc,
+                tuneLength=5)
+pr <- predict(knnFit$finalModel, newdata=X[!train,], type="class")
+confusionMatrix(pr, Y[!train])$overall[1]
 
 
-pred <- predict(models, newdata=test[,-c(N)], type="raw")
+#
+# Combining models
+#
+models <- list(gbmFit, svmFit, rfFit, plsFit, knnFit)
+
+
+# pred <- predict(models, newdata=test[,-c(N)], type="raw")
 preds <- extractPrediction(models, testX=test[,-c(N)], testY=test[,c(N)])
 test.preds <- subset(preds, dataType=="Test")
 
 # confusionMatrix(test.preds$pred, test.preds$obs)
 
-M <- 5
+M <- length(models)
 K <- (nrow(test.preds)/M)
 test.preds$id <- rep(1:K, M)
 # head(test.preds[,c(2,5,6)],10)
@@ -139,4 +129,8 @@ confusionMatrix(test.preds$pred[test.preds$object=="rf"], test$activity)$overall
 confusionMatrix(test.preds$pred[test.preds$object=="pls"], test$activity)$overall[1]
 confusionMatrix(test.preds$pred[test.preds$object=="knn"], test$activity)$overall[1]
 confusionMatrix(test.preds$pred[test.preds$object=="gbm"], test$activity)$overall[1]
+
+
+
+
 
