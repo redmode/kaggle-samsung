@@ -35,8 +35,8 @@ start.cluster <- function(mc=TRUE){
            rscript = "/usr/bin/Rscript",
            snowlib = "/home/ales/R/i586-suse-linux-gnu-library/2.15")
     
-    #master <- "192.168.0.100"
-    master <- "localhost"
+    master <- "192.168.0.100"
+    #master <- "localhost"
     manual <- FALSE
     
     #
@@ -45,7 +45,7 @@ start.cluster <- function(mc=TRUE){
     nodes <- c(#lapply(1:1, function(i) inform2),
                #lapply(1:2, function(i) inform3),
                #lapply(1:2, function(i) inform4),
-               #lapply(1:1, function(i) home),
+               lapply(1:1, function(i) home),
                rep("localhost",2))
     
     #

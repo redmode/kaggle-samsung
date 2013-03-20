@@ -11,14 +11,30 @@ mode <- function(x) {
 ##
 models.env <- new.env()
 models.env$models <- list()
+models.env$saved.time <- NULL
+models.env$times <- list()
 
 clear.models <- function(){
   models.env$models <- list()
+  models.env$times <- list()
 }
 
-add.model <- function(model){
+train.model <- function(...){
+  models.env$saved.time <- Sys.time()
+  
+  model <- train(...)
+
   ind <- 1 + length(models.env$models)
   models.env$models[[ind]] <- model
+  models.env$times[[ind]] <- as.character.POSIXt(Sys.time()-models.env$saved.time)
+  
+  model
+}
+
+show.times <- function(){
+  show <- as.data.frame(models.env$times)
+  colnames(show) <- lapply(1:length(models.env$models), function(i) models.env$models[[i]]$method)
+  show
 }
 
 majority.vote <- function(x){
