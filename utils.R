@@ -21,7 +21,7 @@ add.model <- function(model){
   models.env$models[[ind]] <- model
 }
 
-majority.vote <- function(x,y){
+majority.vote <- function(x){
   pred <- as.data.frame(predict(models.env$models, newdata=x, type="raw"))
   colnames(pred) <- lapply(1:length(models.env$models), function(i) models.env$models[[i]]$method)
   pred$majority.vote <- sapply(1:nrow(pred), function(i) mode(pred[i,])[1,1])
@@ -29,8 +29,32 @@ majority.vote <- function(x,y){
 }
 
 test.majority.vote <- function(x,y){
-  pred <- majority.vote(x,y)
-  res<- sapply(1:ncol(pred), function(i) caret::confusionMatrix(pred[,i], y)$overall[1])
+  pred <- majority.vote(x)
+  res <- sapply(1:ncol(pred), function(i) caret::confusionMatrix(pred[,i], y)$overall[1])
+  names(res) <- colnames(pred)
+  
+  ret <- list()
+  ret$votes <- res
+  class(ret) <- "votes"
+  ret
+}
+
+prob.vote <- function(x){
+  # predicting
+  pred <- predict(models.env$models, newdata=x, type="prob")
+  # normalizing
+  pred <- lapply(pred, function(lst) t(apply(lst,1,function(z) z/sum(z))))
+  # summing list
+  pred <- Reduce("+", pred)/length(models.env$models)
+  # voting
+  prob.vote <- as.factor(sapply(1:nrow(pred), function(i) names(which(pred[i,]==max(pred[i,])))))
+  # combining
+  data.frame(majority.vote(x)[,1:length(models.env$models)], prob.vote)
+}
+
+test.prob.vote <- function(x,y){
+  pred <- prob.vote(x)
+  res <- sapply(1:ncol(pred), function(i) caret::confusionMatrix(pred[,i], y)$overall[1])
   names(res) <- colnames(pred)
   
   ret <- list()

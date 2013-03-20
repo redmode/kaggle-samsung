@@ -82,22 +82,46 @@ add.model(mlpFit)
 glmnetFit <- train(X[train,], Y[train], method='glmnet', trControl=cvCtrl, tuneLength=5)
 add.model(glmnetFit)
 #
-gbmFit <- train(X[train,], Y[train], method='gbm', trControl=cvCtrl,
-                tuneGrid=expand.grid(.interaction.depth=(2:5)*2, .n.trees=100, .shrinkage=0.1))
-add.model(gbmFit)
+# gbmFit <- train(X[train,], Y[train], method='gbm', trControl=cvCtrl,
+#                 tuneGrid=expand.grid(.interaction.depth=(2:5)*2, .n.trees=100, .shrinkage=0.1))
+# add.model(gbmFit)
 #
-svmFit <- train(X[train,], Y[train], method="svmRadial", trControl=cvCtrl,
+svmFit <- train(X[train,], Y[train], method="svmPoly", trControl=cvCtrl,
                 tuneLength=5, scaled=FALSE)
+add.model(svmFit)
 # 
 rfFit <- train(X[train,], Y[train], method="rf",
-               trControl=cvCtrl, tuneLength=3, scaled=FALSE)
+               trControl=cvCtrl, tuneLength=5, scaled=FALSE)
+add.model(rfFit)
 #
 plsFit <- train(X[train,], Y[train], method="pls", trControl=cvCtrl,
-                tuneLength=ncol(X),
-                #tuneGrid=expand.grid(.ncomp=290:310),
-                scaled=FALSE)
+                tuneLength=ncol(X), scaled=FALSE)
+add.model(plsFit)
 #
-knnFit <- train(X[train,], Y[train], method="knn", trControl=cvCtrl, tuneLength=5)
+knnFit <- train(X[train,], Y[train], method="knn", trControl=cvCtrl, tuneLength=10)
+add.model(knnFit)
+#
+avnetFit <- train(X[train,], Y[train], method="avNNet", trControl=cvCtrl, tuneLength=5)
+add.model(avnetFit)
+#
+cfFit <- train(X[train,], Y[train], method="cforest", trControl=cvCtrl, tuneLength=3)
+add.model(cfFit)
+#
+fdaFit <- train(X[train,], Y[train], method="fda", trControl=cvCtrl, tuneLength=7)
+add.model(fdaFit)
+#
+ldaFit <- train(X[train,], Y[train], method="lda2", trControl=cvCtrl, tuneLength=10)
+add.model(ldaFit)
+#
+mnFit <- train(X[train,], Y[train], method="multinom", trControl=cvCtrl, tuneLength=5, maxit=500)
+add.model(mnFit)
+#
+pdaFit <- train(X[train,], Y[train], method="pda", trControl=cvCtrl, tuneLength=10)
+add.model(pdaFit)
+#
+# xFit <- train(X[train,], Y[train], method="sda", trControl=cvCtrl, tuneLength=3)
+# add.model(xFit)
+# xFit
 
 ##
 ## Stop cluster
@@ -111,7 +135,9 @@ stop.cluster()
 # Majority vote
 mv <- test.majority.vote(X[!train,], Y[!train])
 mv
-prune.models(mv)
-test.majority.vote(X[!train,], Y[!train])
+pv <- test.prob.vote(X[!train,], Y[!train])
+pv
 
-# Probability vote
+prune.models(mv)
+prune.models(pv)
+
