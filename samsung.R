@@ -63,7 +63,8 @@ TX <- predict(pp, TX)
 ##
 ## Feature selection
 ##
-subsets <- c(5,10,50,100,200,300)
+# subsets <- c(50,100,150,200,250,300,400)
+subsets <- c(1)
 ctrl <- rfeControl(functions = rfFuncs, method = "repeatedcv", number = 8, repeats = 3,
                    verbose = FALSE, returnResamp = "final")
 profile <- rfe(X[train,], Y[train], sizes = subsets, rfeControl = ctrl)
