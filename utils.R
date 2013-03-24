@@ -89,5 +89,47 @@ prune.models <- function(votes, threshold=0.80){
   scope <- c(which(votes$votes<threshold))
   if(length(scope)>0){
     models.env$models <- models.env$models[-scope]
+    models.env$times <- models.env$times[-scope]
   }  
 }
+
+postfilter <- function(x, threshold=1){
+  x <- as.data.frame(x)
+  x$corrected <- x$x
+  
+  ## Head and tail correction
+  # x[1,2] <- x[2,2] <- x[3,1]
+  # x[nrow(x),2] <- x[nrow(x)-1,2] <- x[nrow(x)-2,1]
+  
+  ## One-inside correction
+  for(i in 3:(nrow(x)-2)){
+    if(x[i,1]!=x[i-1,1] & x[i,1]!=x[i+1,1] & x[i-1,1]==x[i-2,1] & x[i+1,1]==x[i+2,1]){
+      x[i,2] <- x[i+1,1]
+    }
+  }
+  
+  ## Two-inside correction
+  if(threshold>1){
+    for(i in 4:(nrow(x)-4)){
+      if(x[i,2]==x[i+1,2] &
+           x[i,2]!=x[i-1,2]   & x[i-1,2]==x[i-2,2] & x[i-2,2]==x[i-3,2] &
+           x[i+1,2]!=x[i+2,2] & x[i+2,2]==x[i+3,2] & x[i+3,2]==x[i+4,2]){
+        x[i,2] <- x[i+1,2] <- x[i+2,2]
+      }
+    }
+  }
+  
+  ## Tree-inside correction
+  if(threshold>2){
+    for(i in 4:(nrow(x)-5)){
+      if(x[i,2]==x[i+1,2] & x[i+1,2]==x[i+2,2] &
+         x[i,2]!=x[i-1,2] &
+         all.equal(list(x[i-1,2],x[i-2,2],x[i-3,2]),list(x[i+3,2],x[i+4,2],x[i+5,2]))[1]==TRUE){
+        x[i:(i+2),2] <- x[(i+3):(i+5),2]
+      }
+    }
+  }
+  
+  x$corrected
+}
+

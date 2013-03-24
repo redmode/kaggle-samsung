@@ -5,12 +5,15 @@ cluster.env$is.mc.cluster <- NULL
 
 start.cluster <- function(mc=TRUE){
   N <- NULL
+  n.cores <- switch(Sys.info()[['sysname']],
+                    Windows= {as.numeric(Sys.getenv('NUMBER_OF_PROCESSORS'))},
+                    Linux  = {require(doMC)
+                              detectCores()})
   cluster.env$is.mc.cluster <- mc
   
   if(mc){
-    require(doMC)
     N <- detectCores()
-    registerDoMC(N)
+    registerDoMC(n.cores)
   }
   else{
     require(doSNOW)
@@ -43,21 +46,22 @@ start.cluster <- function(mc=TRUE){
            rscript = "/usr/bin/Rscript",
            snowlib = "/home/ales/R/i586-suse-linux-gnu-library/2.15")
     
-    master <- "192.168.0.100"
-    #master <- "inform-1"
-    manual <- FALSE
-    #manual <- TRUE
+    #master <- "192.168.0.100"
+    master <- "inform-1"
+    #manual <- FALSE
+    manual <- TRUE
     
     #
     # Combines nodes
     #
     nodes <- c(#lapply(1:1, function(i) inform2),
-               #lapply(1:2, function(i) inform3),
-               #lapply(1:2, function(i) inform4),
-               #lapply(1:2, function(i) prponauke),
+               lapply(1:2, function(i) inform3),
+               lapply(1:2, function(i) inform4),
+               lapply(1:2, function(i) prponauke),
                #lapply(1:1, function(i) home),
-               rep("localhost",detectCores()))
+               rep("localhost",n.cores))
     N <- length(nodes)
+    
     #
     # Register & run
     #
@@ -67,13 +71,15 @@ start.cluster <- function(mc=TRUE){
   ##
   ## Testing cluster
   ##
-  res <- foreach(i=1:N, .combine=sum) %dopar% {
-          i
-         }
+  res <- foreach(i=1:N, .combine=sum) %dopar% { i }
   ifelse(res==sum(1:N), TRUE, FALSE)
 }
 
 stop.cluster <- function(){
+  if(is.null(cluster.env$cluster)){
+    print("There are no clusters to stop!")
+  }
+  
   if(!cluster.env$is.mc.cluster){
     stopCluster(cluster.env$cluster)
     
